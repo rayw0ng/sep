@@ -1,0 +1,11 @@
+#!/bin/sh
+# i3status.conf should contain:
+# general {
+#   output_format = i3bar
+# }
+i3status | (read line && echo "$line" && read line && echo "$line" && read line && echo "$line" && while :
+do
+  read line
+  sep="$($HOME/bin/sep status)"
+  echo ",[{\"full_text\":\"${sep}\"},${line#,\[}" || exit 1
+done)
