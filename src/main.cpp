@@ -9,13 +9,17 @@ namespace fs = std::filesystem;
 const char *DGRAM_FILE = "#abstract:simpleeyeprotector.dgram";
 const char *STATUS_FILE = "/tmp/simpleeyeprotector.status";
 
-void notify(int minutes) {
+void notify(bool is_working, int minutes) {
   char buf[16];
   sprintf(buf, "%d minutes", minutes);
-  auto obj = notify_notification_new("Take a break", buf, "face-smile");
+  auto msg = is_working ? "Take a break" : "Get to work";
+  auto icon = is_working ? "face-smile" : "face-plain";
+  auto obj = notify_notification_new(msg, buf, icon);
   auto sound = g_variant_new_string("alarm-clock-elapsed");
   notify_notification_set_hint(obj, "sound-name", sound);
-  notify_notification_set_timeout(obj, minutes * 60 * 1000);
+  if (is_working) {
+    notify_notification_set_timeout(obj, minutes * 60 * 1000);
+  }
   if (!notify_notification_show(obj, NULL)) {
     std::cerr << "failed to send notification." << std::endl;
   };
@@ -76,18 +80,18 @@ int listen(int work, int break_) {
     }
     auto span = std::chrono::duration_cast<std::chrono::minutes>(
         std::chrono::steady_clock::now() - start_time);
-    write_status(span.count(), is_working ? work : break_);
-    if (is_working) {
-      if (span.count() >= work) {
-        notify(break_);
-        start_time = std::chrono::steady_clock::now();
-        is_working = false;
-      }
+    if (is_working && span.count() >= work) {
+      notify(is_working, break_);
+      start_time = std::chrono::steady_clock::now();
+      is_working = false;
+      write_status(0, break_);
+    } else if (!is_working && span.count() >= break_) {
+      notify(is_working, break_);
+      start_time = std::chrono::steady_clock::now();
+      is_working = true;
+      write_status(0, work);
     } else {
-      if (span.count() >= break_) {
-        start_time = std::chrono::steady_clock::now();
-        is_working = true;
-      }
+      write_status(span.count(), is_working ? work : break_);
     }
   }
 
