@@ -80,13 +80,15 @@ int listen(int work, int break_) {
     }
     auto span = std::chrono::duration_cast<std::chrono::minutes>(
         std::chrono::steady_clock::now() - start_time);
+    // take a break
     if (is_working && span.count() >= work) {
       notify(is_working, break_);
       start_time = std::chrono::steady_clock::now();
       is_working = false;
       write_status(0, break_);
+    // go to work
     } else if (!is_working && span.count() >= break_) {
-      notify(is_working, break_);
+      notify(is_working, work);
       start_time = std::chrono::steady_clock::now();
       is_working = true;
       write_status(0, work);
